@@ -2,25 +2,30 @@ import sys
 import tweepy
 
 class TweetStream(object) :
+    all_terms = ['haram', 'halal', 'alcohol', 'alkohol', 'miras', 'minuman keras', 'rokok', 'kretek', 'merokok', 'adhmadiyah', 'admadiyah', 'ahmadiah', 'shia', 'syiah', 'shiah', 'sesat', 'lady gaga', 'porno', 'polygamy', 'pollgami', 'poligami', 'imunsasi', 'vaksin', 'vaksinisasi', 'immunization']
     def __init__(self, consumer_key=None, consumer_secret=None, access_key=None, access_secret=None):
         self.auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
         self.auth.set_access_token(access_key, access_secret)
         self.api = tweepy.API(self.auth)
     def run(self, callback=None):
         sapi = tweepy.streaming.Stream(self.auth, HaramStreamListener(callback=callback))
-        sapi.filter(locations=[106.00,-7.00,110.00,-5.00])
+        sapi.filter(track=self.all_terms,locations=[94.97,-11.00,141.01,10.61])
 
 class HaramStreamListener(tweepy.StreamListener):
-    haram_terms = ['haram', 'tidak halal']
+    all_terms = ['haram', 'halal', 'alcohol', 'alkohol', 'miras', 'minuman keras', 'rokok', 'kretek', 'merokok', 'adhmadiyah', 'admadiyah', 'ahmadiah', 'shia', 'syiah', 'shiah', 'sesat', 'lady gaga', 'porno', 'polygamy', 'pollgami', 'poligami', 'imunsasi', 'vaksin', 'vaksinisasi', 'immunization']
+    haram_terms = ['haram', 'halal']
 
     def __init__(self, callback=None) :
         self.callback = callback
         super(HaramStreamListener, self).__init__()
 
     def on_status(self, status):
-        import string
-        status = filter(lambda x: x in string.printable, status.text)
-        status = " ".join(status.split()).lower() # Normalize tweet
+        country = getattr(status.place, 'country', '').lower()
+        country_code = getattr(status.place, 'country_code', '').lower()
+        if country != 'indonesia' and country_code != 'id' :
+            return
+        status = " ".join(status.text.split()).lower() # Normalize tweet
+        status = status.encode('ascii', errors='ignore')
         if self.is_tweet_of_interest(status) :
             self.callback(status)
 
@@ -43,7 +48,11 @@ class HaramStreamListener(tweepy.StreamListener):
             if at in status :
                 has_alcohol_term = True
                 break
-        return has_alcohol_term
+        if has_alcohol_term:
+            for ht in self.haram_terms :
+                if ht in status :
+                    return has_alcohol_term
+        return False
 
     tobacco_terms = ['rokok', 'kretek', 'merokok']
 
@@ -53,7 +62,12 @@ class HaramStreamListener(tweepy.StreamListener):
             if at in status :
                 has_tobacco_term = True
                 break
-        return has_tobacco_term
+        if has_tobacco_term :
+            for ht in self.haram_terms :
+                if ht in status :
+                    return has_tobacco_term
+        return False
+
         
     def is_adhmadiyah_tweet(self, status) :
         return 'adhmadiyah' in status or 'admadiyah' in status or 'ahmadiah' in status

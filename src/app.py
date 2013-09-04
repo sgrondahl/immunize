@@ -14,6 +14,7 @@ import controllers
 import helpers
 import os
 import sys
+import threading
 
 from tornado.options import define, options
  
@@ -49,22 +50,25 @@ class Application(tornado.web.Application):
                                                consumer_secret="lPthCjoNKYcMHczVICuFRqdVHr8a85osRJivfQq2g",
                                                access_key="324125277-ljc3saqxszAZzQbqHF8qQMjWjfKRhGE399MBqskO",
                                                access_secret="26yiGFYVP5Sf3it89NSJVW02q1Tc2atYZykApnR0")
-#        self.get_twitter_stream()
+        self.get_twitter_stream()
     
     @property
     def logging(self) :
         return Settings.logging
 
     def get_twitter_stream(self):
+        def run_tss_threaded() :
+            threading.Thread(target=tweetstream_sub).start()
+            
         def tweetstream_sub() :
             self.tweetstream.run(callback=handle_tweet)
 
         def handle_tweet(status) :
             translation = self.translator.translate(lang_from='id', query=status)
-            tweet = self.tweet_controller.create(status=status, translation=trans)
+            tweet = self.tweet_controller.create(status=status, translation=translation)
             self.logging.info(tweet.serialize())
 
-        tornado.ioloop.IOLoop.instance().add_callback(tweetstream_sub)
+        tornado.ioloop.IOLoop.instance().add_callback(run_tss_threaded)
 
  
 def main():
