@@ -6,6 +6,8 @@ except ImportError:
 import json
 import requests
 import urllib
+import tornado.httpclient
+import tornado.web
 
 
 class AzureRequest(object) :
@@ -45,6 +47,7 @@ class Translator(object) :
         response = requests.get(url, headers=headers)
         response_xml = ET.fromstring(response.text)
         return response_xml.text
+
         
 
         

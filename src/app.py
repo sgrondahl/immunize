@@ -10,7 +10,7 @@ import uuid
 import base64
 import hashlib
 import Settings
-#import controllers
+import controllers
 import helpers
 import os
 import sys
@@ -36,28 +36,35 @@ class Application(tornado.web.Application):
 
         app_handlers = [
             (r'/', handlers.MainHandler),
+            (r'/test/?', handlers.MainHandler),
+            (r'/tweets/all/?', handlers.AllTweetsHandler)
         ]
         tornado.web.Application.__init__(self, app_handlers, **settings)
 
+        self.tweet_controller = controllers.TweetController(self.db)
 
         self.translator = helpers.Translator(client_id="Immunizer",
                                              client_secret="qRP81ZLwANsnfjKg8MLyzoLla4XG+j288lLSGZq949Y=")
-        self.tweetstream = helpers.TweetStream(consumer_key="",
-                                               consumer_secret="",
-                                               access_key="",
-                                               access_secret="")
-        self.get_twitter_stream()
+        self.tweetstream = helpers.TweetStream(consumer_key="KFF5bxzKp4O8Frm7PQ5lLg",
+                                               consumer_secret="lPthCjoNKYcMHczVICuFRqdVHr8a85osRJivfQq2g",
+                                               access_key="324125277-ljc3saqxszAZzQbqHF8qQMjWjfKRhGE399MBqskO",
+                                               access_secret="26yiGFYVP5Sf3it89NSJVW02q1Tc2atYZykApnR0")
+#        self.get_twitter_stream()
     
     @property
     def logging(self) :
         return Settings.logging
 
     def get_twitter_stream(self):
-        def _ensure() :
-            id_string = "Setiap orang berhak mendapat pendidikan."
-            response = self.translator.translate(lang_from='id', query=id_string)
-            print response
-        tornado.ioloop.IOLoop.instance().add_callback(_ensure)
+        def tweetstream_sub() :
+            self.tweetstream.run(callback=handle_tweet)
+
+        def handle_tweet(status) :
+            translation = self.translator.translate(lang_from='id', query=status)
+            tweet = self.tweet_controller.create(status=status, translation=trans)
+            self.logging.info(tweet.serialize())
+
+        tornado.ioloop.IOLoop.instance().add_callback(tweetstream_sub)
 
  
 def main():
